@@ -39,10 +39,47 @@
       z-index: 10;
       border: 3px solid #ffd76a;
     }
+    #pickScreen {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, #2b1055, #7597de);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      color: white;
+      text-align: center;
+    }
+    #pickScreen h1 {
+      font-size: 2.4em;
+      margin-bottom: 30px;
+    }
+    .pickBtn {
+      font-size: 1.4em;
+      padding: 20px 40px;
+      margin: 12px;
+      border-radius: 20px;
+      border: 4px solid #ffd76a;
+      background: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .pickBtn:hover {
+      background: #ffd76a;
+    }
   </style>
 </head>
 <body>
-  <div id="ui">🐾 Use ARROW KEYS or WASD to move, SPACE to jump<br>Climb the tree and meet everyone!</div>
+  <div id="pickScreen">
+    <h1>🐾 Paws of Magic ✨</h1>
+    <p>Who do you want to be?</p>
+    <div>
+      <button class="pickBtn" id="pickCat">🐱 Cat</button>
+      <button class="pickBtn" id="pickDog">🐶 Dog</button>
+    </div>
+  </div>
+  <div id="ui" style="display:none">🐾 WASD/ARROWS to move, SPACE to jump<br>Drag the mouse to look around. Climb the tree!</div>
   <div id="storyBox"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -146,39 +183,119 @@
       characters.push(body);
     });
 
-    // ---------- Player (magic cat = simple stylized shapes) ----------
-    const cat = new THREE.Group();
-    const catMat = new THREE.MeshStandardMaterial({ color: 0xff9a3c });
-    const catBody = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), catMat);
-    catBody.scale.set(1, 0.85, 1.3);
-    catBody.castShadow = true;
-    cat.add(catBody);
+    // ---------- Player (magic cat or dog = simple stylized shapes) ----------
+    function makePet(kind) {
+      const group = new THREE.Group();
+      const color = kind === 'dog' ? 0xc98a4b : 0xff9a3c;
+      const mat = new THREE.MeshStandardMaterial({ color });
 
-    const catHead = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 16), catMat);
-    catHead.position.set(0, 0.4, 1.1);
-    catHead.castShadow = true;
-    cat.add(catHead);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), mat);
+      body.scale.set(1, 0.85, 1.3);
+      body.castShadow = true;
+      group.add(body);
 
-    const earMat = catMat;
-    [-0.25, 0.25].forEach(x => {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.35, 8), earMat);
-      ear.position.set(x, 0.85, 1.1);
-      cat.add(ear);
-    });
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 16), mat);
+      head.position.set(0, 0.4, 1.1);
+      head.castShadow = true;
+      group.add(head);
 
-    const tailGeo = new THREE.CylinderGeometry(0.1, 0.15, 1.3, 8);
-    const tail = new THREE.Mesh(tailGeo, catMat);
-    tail.position.set(0, 0.3, -1.2);
-    tail.rotation.x = Math.PI / 3;
-    cat.add(tail);
+      if (kind === 'dog') {
+        // Floppy dog ears
+        [-0.35, 0.35].forEach(x => {
+          const ear = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 10), mat);
+          ear.scale.set(0.6, 1.3, 0.4);
+          ear.position.set(x, 0.25, 1.15);
+          ear.rotation.z = x > 0 ? -0.4 : 0.4;
+          group.add(ear);
+        });
+        // Snout
+        const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.5, 10), mat);
+        snout.rotation.x = Math.PI / 2;
+        snout.position.set(0, 0.25, 1.6);
+        group.add(snout);
+        // Wagging tail (up, curled)
+        const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 1.0, 8), mat);
+        tail.position.set(0, 0.5, -1.1);
+        tail.rotation.x = -Math.PI / 3;
+        tail.name = 'tail';
+        group.add(tail);
+      } else {
+        // Pointy cat ears
+        [-0.25, 0.25].forEach(x => {
+          const ear = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.35, 8), mat);
+          ear.position.set(x, 0.85, 1.1);
+          group.add(ear);
+        });
+        // Long cat tail
+        const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 1.3, 8), mat);
+        tail.position.set(0, 0.3, -1.2);
+        tail.rotation.x = Math.PI / 3;
+        tail.name = 'tail';
+        group.add(tail);
+      }
 
-    cat.position.set(0, 1, 12);
-    scene.add(cat);
+      return group;
+    }
+
+    let cat = null; // the player's pet group (kept name "cat" for the rest of the game logic)
+
+    document.getElementById('pickCat').addEventListener('click', () => startGame('cat'));
+    document.getElementById('pickDog').addEventListener('click', () => startGame('dog'));
+
+    function startGame(kind) {
+      cat = makePet(kind);
+      cat.position.set(0, 1, 12);
+      scene.add(cat);
+      document.getElementById('pickScreen').style.display = 'none';
+      document.getElementById('ui').style.display = 'block';
+      animate();
+    }
 
     // ---------- Controls ----------
     const keys = {};
     window.addEventListener('keydown', e => { keys[e.code] = true; });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    // ---------- Camera drag-to-look ----------
+    let camYaw = 0;
+    let camPitch = 0.35;
+    let dragging = false;
+    let lastMouseX = 0, lastMouseY = 0;
+
+    renderer.domElement.addEventListener('mousedown', e => {
+      dragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+    window.addEventListener('mouseup', () => { dragging = false; });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      camYaw -= dx * 0.006;
+      camPitch += dy * 0.004;
+      camPitch = Math.max(0.08, Math.min(1.2, camPitch));
+    });
+
+    // touch support (drag with one finger)
+    renderer.domElement.addEventListener('touchstart', e => {
+      dragging = true;
+      lastMouseX = e.touches[0].clientX;
+      lastMouseY = e.touches[0].clientY;
+    });
+    window.addEventListener('touchend', () => { dragging = false; });
+    window.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const dx = e.touches[0].clientX - lastMouseX;
+      const dy = e.touches[0].clientY - lastMouseY;
+      lastMouseX = e.touches[0].clientX;
+      lastMouseY = e.touches[0].clientY;
+      camYaw -= dx * 0.006;
+      camPitch += dy * 0.004;
+      camPitch = Math.max(0.08, Math.min(1.2, camPitch));
+    });
 
     let velocityY = 0;
     let onGround = true;
@@ -225,30 +342,45 @@
       }
     }
 
-    // ---------- Camera follow ----------
+    // ---------- Camera follow (orbits around the pet, drag mouse to look) ----------
+    const camDistance = 9;
     function updateCamera() {
-      const camOffset = new THREE.Vector3(0, 4, 9);
-      const desired = cat.position.clone().add(camOffset);
-      camera.position.lerp(desired, 0.08);
+      const offset = new THREE.Vector3(
+        Math.sin(camYaw) * camDistance * Math.cos(camPitch),
+        camDistance * Math.sin(camPitch) + 2,
+        Math.cos(camYaw) * camDistance * Math.cos(camPitch)
+      );
+      const desired = cat.position.clone().add(offset);
+      camera.position.lerp(desired, 0.15);
       camera.lookAt(cat.position.x, cat.position.y + 1, cat.position.z);
     }
 
     // ---------- Game loop ----------
     function animate() {
       requestAnimationFrame(animate);
+      if (!cat) return;
 
-      let moveX = 0, moveZ = 0;
-      if (keys['ArrowUp'] || keys['KeyW']) moveZ -= 1;
-      if (keys['ArrowDown'] || keys['KeyS']) moveZ += 1;
-      if (keys['ArrowLeft'] || keys['KeyA']) moveX -= 1;
-      if (keys['ArrowRight'] || keys['KeyD']) moveX += 1;
+      // Move relative to the camera's facing direction
+      let inputX = 0, inputZ = 0;
+      if (keys['ArrowUp'] || keys['KeyW']) inputZ -= 1;
+      if (keys['ArrowDown'] || keys['KeyS']) inputZ += 1;
+      if (keys['ArrowLeft'] || keys['KeyA']) inputX -= 1;
+      if (keys['ArrowRight'] || keys['KeyD']) inputX += 1;
 
-      if (moveX !== 0 || moveZ !== 0) {
-        const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
-        moveX /= len; moveZ /= len;
-        cat.position.x += moveX * moveSpeed;
-        cat.position.z += moveZ * moveSpeed;
-        const targetAngle = Math.atan2(moveX, moveZ);
+      if (inputX !== 0 || inputZ !== 0) {
+        const len = Math.sqrt(inputX * inputX + inputZ * inputZ);
+        inputX /= len; inputZ /= len;
+
+        const forward = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));
+        const right = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
+        const move = new THREE.Vector3();
+        move.addScaledVector(forward, inputZ);
+        move.addScaledVector(right, inputX);
+        move.normalize();
+
+        cat.position.x += move.x * moveSpeed;
+        cat.position.z += move.z * moveSpeed;
+        const targetAngle = Math.atan2(move.x, move.z);
         cat.rotation.y += (targetAngle - cat.rotation.y) * 0.2;
       }
 
@@ -266,7 +398,6 @@
 
       renderer.render(scene, camera);
     }
-    animate();
   </script>
 </body>
 </html>
