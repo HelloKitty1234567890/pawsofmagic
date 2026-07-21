@@ -673,11 +673,22 @@
     function takeDamage(amount) {
       const now = performance.now();
       if (now < invincibleUntil) return;
-      // Armor soaks up some of the hit
+
+      // Iron and gold always soften the hit a little. Dragon armor instead
+      // gives you a chance to dodge the hit completely, so it's still exciting
+      // but you don't take damage every single time.
       let dmg = amount;
       if (currentArmor === 'iron') dmg = Math.max(1, amount - 1);
       if (currentArmor === 'gold') dmg = Math.max(1, amount - 1);
-      if (currentArmor === 'dragon') dmg = Math.max(1, amount - 2);
+      if (currentArmor === 'dragon') {
+        if (Math.random() < 0.5) {
+          invincibleUntil = now + 1200;
+          storyBox.style.display = 'block';
+          storyBox.innerHTML = '<b>🐉 Dodged!</b> The dragon armor saved you!';
+          setTimeout(() => { storyBox.style.display = 'none'; }, 1000);
+          return;
+        }
+      }
 
       health -= dmg;
       invincibleUntil = now + 1200;
