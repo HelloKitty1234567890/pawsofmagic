@@ -128,6 +128,30 @@
     .armorBtn:hover {
       background: #ff8c3a;
     }
+    #healthBar {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 28px;
+      text-shadow: 2px 2px 3px rgba(0,0,0,0.6);
+      z-index: 10;
+      display: none;
+    }
+    #gameOverScreen {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 5, 20, 0.92);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      z-index: 25;
+    }
+    #gameOverScreen h1 {
+      font-size: 2.4em;
+    }
   </style>
 </head>
 <body>
@@ -156,6 +180,12 @@
     <button class="armorBtn" data-armor="gold">🥇 Gold Armor</button>
     <button class="armorBtn" data-armor="dragon">🐉 Dragon Armor</button>
     <button class="armorBtn" data-armor="none">❌ No Armor</button>
+  </div>
+  <div id="healthBar"></div>
+  <div id="gameOverScreen">
+    <h1>💫 The eagles got you!</h1>
+    <p>Don't worry, try again!</p>
+    <button class="pickBtn" id="respawnBtn">Try Again</button>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -597,6 +627,7 @@
       return group;
     }
 
+    let currentArmor = 'none';
     function setArmor(kind) {
       if (!cat) return;
       const old = cat.getObjectByName('armor');
@@ -604,6 +635,7 @@
       const armor = buildArmor(kind);
       armor.name = 'armor';
       cat.add(armor);
+      currentArmor = kind;
     }
 
     let cat = null; // the player's pet group (kept name "cat" for the rest of the game logic)
@@ -624,7 +656,185 @@
       scene.add(cat);
       document.getElementById('pickScreen').style.display = 'none';
       document.getElementById('ui').style.display = 'block';
+      document.getElementById('healthBar').style.display = 'block';
+      updateHealthBar();
+      setTimeout(startNight, 45000);
       animate();
+    }
+
+    // ---------- Health ----------
+    let maxHealth = 5;
+    let health = maxHealth;
+    let invincibleUntil = 0;
+    function updateHealthBar() {
+      document.getElementById('healthBar').innerHTML = '❤️'.repeat(Math.max(0, health)) + '🖤'.repeat(maxHealth - Math.max(0, health));
+    }
+
+    function takeDamage(amount) {
+      const now = performance.now();
+      if (now < invincibleUntil) return;
+      // Armor soaks up some of the hit
+      let dmg = amount;
+      if (currentArmor === 'iron') dmg = Math.max(1, amount - 1);
+      if (currentArmor === 'gold') dmg = Math.max(1, amount - 1);
+      if (currentArmor === 'dragon') dmg = Math.max(1, amount - 2);
+
+      health -= dmg;
+      invincibleUntil = now + 1200;
+      updateHealthBar();
+      if (health <= 0) {
+        gameOver();
+      }
+    }
+
+    function gameOver() {
+      document.getElementById('gameOverScreen').style.display = 'flex';
+    }
+
+    document.getElementById('respawnBtn').addEventListener('click', () => {
+      health = maxHealth;
+      updateHealthBar();
+      cat.position.set(0, 1, 12);
+      document.getElementById('gameOverScreen').style.display = 'none';
+    });
+
+    // ---------- Day / Night cycle ----------
+    let isNight = false;
+    const eagles = [];
+
+    function startNight() {
+      isNight = true;
+      scene.background = new THREE.Color(0x0a0a2a);
+      scene.fog.color.set(0x0a0a2a);
+      sun.intensity = 0.25;
+      scene.children.forEach(obj => {
+        if (obj.isAmbientLight) obj.intensity = 0.2;
+      });
+      storyBox.style.display = 'block';
+      storyBox.innerHTML = '<b>🌙 Night has fallen!</b><br>Watch out - eagles are attacking!';
+      setTimeout(() => { storyBox.style.display = 'none'; }, 3500);
+
+      for (let i = 0; i < 5; i++) {
+        spawnEagle();
+      }
+      setTimeout(endNight, 40000);
+    }
+
+    function endNight() {
+      isNight = false;
+      scene.background = new THREE.Color(0xa8d8ff);
+      scene.fog.color.set(0xa8d8ff);
+      sun.intensity = 1.1;
+      scene.children.forEach(obj => {
+        if (obj.isAmbientLight) obj.intensity = 0.55;
+      });
+      eagles.forEach(e => scene.remove(e.group));
+      eagles.length = 0;
+      storyBox.style.display = 'block';
+      storyBox.innerHTML = '<b>☀️ Morning has come.</b><br>The eagles have flown away... for now.';
+      setTimeout(() => { storyBox.style.display = 'none'; }, 3500);
+      setTimeout(startNight, 60000);
+    }
+
+    function makeEagleMesh() {
+      const group = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x6b4a34 });
+      const body = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.1, 6), bodyMat);
+      body.rotation.x = Math.PI / 2;
+      body.castShadow = true;
+      group.add(body);
+
+      const headMat = new THREE.MeshStandardMaterial({ color: 0xe8e0d0 });
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), headMat);
+      head.position.z = 0.65;
+      group.add(head);
+
+      const wingMat = new THREE.MeshStandardMaterial({ color: 0x4a3324, side: THREE.DoubleSide });
+      [-1, 1].forEach(side => {
+        const wing = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.5), wingMat);
+        wing.position.x = side * 0.15;
+        wing.rotation.y = side * 0.25;
+        wing.name = side > 0 ? 'wingR' : 'wingL';
+        group.add(wing);
+      });
+
+      return group;
+    }
+
+    function spawnEagle() {
+      const group = makeEagleMesh();
+      const angle = Math.random() * Math.PI * 2;
+      const eagle = {
+        group,
+        state: 'circling',
+        circleAngle: angle,
+        circleRadius: 16 + Math.random() * 8,
+        circleHeight: 40 + Math.random() * 25,
+        circleSpeed: 0.006 + Math.random() * 0.004,
+        diveCooldown: 2000 + Math.random() * 3000
+      };
+      scene.add(group);
+      eagles.push(eagle);
+    }
+
+    function updateEagles() {
+      if (!isNight || !cat) return;
+      const now = performance.now();
+
+      eagles.forEach(eagle => {
+        const g = eagle.group;
+        // Flap the wings
+        const flap = Math.sin(now * 0.02) * 0.5;
+        const wingR = g.getObjectByName('wingR');
+        const wingL = g.getObjectByName('wingL');
+        if (wingR) wingR.rotation.z = flap;
+        if (wingL) wingL.rotation.z = -flap;
+
+        if (eagle.state === 'circling') {
+          eagle.circleAngle += eagle.circleSpeed;
+          g.position.set(
+            Math.cos(eagle.circleAngle) * eagle.circleRadius,
+            eagle.circleHeight,
+            Math.sin(eagle.circleAngle) * eagle.circleRadius
+          );
+          g.rotation.y = eagle.circleAngle + Math.PI / 2;
+
+          eagle.diveCooldown -= 16;
+          const distToPlayer = new THREE.Vector2(g.position.x - cat.position.x, g.position.z - cat.position.z).length();
+          if (eagle.diveCooldown <= 0 && distToPlayer < 25) {
+            eagle.state = 'diving';
+            eagle.diveTarget = cat.position.clone();
+          }
+        } else if (eagle.state === 'diving') {
+          const target = eagle.diveTarget;
+          const dir = new THREE.Vector3().subVectors(target, g.position);
+          const dist = dir.length();
+          dir.normalize();
+          g.position.addScaledVector(dir, 0.55);
+          g.lookAt(target.x, target.y, target.z);
+
+          if (dist < 1.8) {
+            takeDamage(1);
+            eagle.state = 'returning';
+          } else if (dist < 3) {
+            eagle.state = 'returning';
+          }
+        } else if (eagle.state === 'returning') {
+          const upTarget = new THREE.Vector3(
+            Math.cos(eagle.circleAngle) * eagle.circleRadius,
+            eagle.circleHeight,
+            Math.sin(eagle.circleAngle) * eagle.circleRadius
+          );
+          const dir = new THREE.Vector3().subVectors(upTarget, g.position);
+          const dist = dir.length();
+          dir.normalize();
+          g.position.addScaledVector(dir, 0.5);
+          if (dist < 2) {
+            eagle.state = 'circling';
+            eagle.diveCooldown = 3000 + Math.random() * 4000;
+          }
+        }
+      });
     }
 
     // ---------- Wardrobe, sitting at the bottom of the tree ----------
@@ -812,6 +1022,7 @@
       checkCharacterMeet();
       checkWardrobe();
       checkForge();
+      updateEagles();
       updateCamera();
 
       renderer.render(scene, camera);
