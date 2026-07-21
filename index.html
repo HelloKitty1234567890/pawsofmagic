@@ -68,6 +68,36 @@
     .pickBtn:hover {
       background: #ffd76a;
     }
+    #wardrobeMenu {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 20, 50, 0.92);
+      color: white;
+      padding: 18px 24px;
+      border-radius: 16px;
+      text-align: center;
+      display: none;
+      z-index: 15;
+      border: 3px solid #ffd76a;
+    }
+    #wardrobeMenu h3 {
+      margin: 0 0 10px 0;
+    }
+    .outfitBtn {
+      font-size: 1.1em;
+      padding: 10px 16px;
+      margin: 5px;
+      border-radius: 12px;
+      border: 3px solid #ffd76a;
+      background: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .outfitBtn:hover {
+      background: #ffd76a;
+    }
   </style>
 </head>
 <body>
@@ -79,8 +109,17 @@
       <button class="pickBtn" id="pickDog">🐶 Dog</button>
     </div>
   </div>
-  <div id="ui" style="display:none">🐾 WASD/ARROWS to move, SPACE to jump<br>Drag the mouse to look around. Climb the tree!</div>
+  <div id="ui" style="display:none">🐾 WASD/ARROWS to move, SPACE to jump<br>Drag the mouse to look around. Climb the tree!<br>Visit the wardrobe at the bottom of the tree to change outfits!</div>
   <div id="storyBox"></div>
+  <div id="wardrobeMenu">
+    <h3>👗 Pick an outfit!</h3>
+    <button class="outfitBtn" data-outfit="strawberry">🍓 Strawberry Hat</button>
+    <button class="outfitBtn" data-outfit="bow">🎀 Bow</button>
+    <button class="outfitBtn" data-outfit="crown">👑 Crown</button>
+    <button class="outfitBtn" data-outfit="sunglasses">🕶️ Sunglasses</button>
+    <button class="outfitBtn" data-outfit="scarf">🧣 Scarf</button>
+    <button class="outfitBtn" data-outfit="none">❌ Nothing</button>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
@@ -338,45 +377,112 @@
         group.add(tail);
       }
 
-      // Strawberry hat, worn on top of the head
-      const hat = new THREE.Group();
-      const berryMat = new THREE.MeshStandardMaterial({ color: 0xe8384f });
-      const berry = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), berryMat);
-      berry.scale.set(1, 1.2, 1);
-      berry.castShadow = true;
-      hat.add(berry);
-
-      // Little seed dots on the strawberry
-      const seedMat = new THREE.MeshStandardMaterial({ color: 0xfff2b0 });
-      for (let i = 0; i < 8; i++) {
-        const seed = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), seedMat);
-        const a = (i / 8) * Math.PI * 2;
-        seed.position.set(Math.cos(a) * 0.36, Math.sin(a * 2) * 0.15, Math.sin(a) * 0.36);
-        hat.add(seed);
-      }
-
-      // Green leafy top
-      const leafHatMat = new THREE.MeshStandardMaterial({ color: 0x4caf50 });
-      for (let i = 0; i < 5; i++) {
-        const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.28, 6), leafHatMat);
-        const a = (i / 5) * Math.PI * 2;
-        leaf.position.set(Math.cos(a) * 0.14, 0.55, Math.sin(a) * 0.14);
-        leaf.rotation.x = 0.5 * Math.cos(a);
-        leaf.rotation.z = 0.5 * Math.sin(a);
-        hat.add(leaf);
-      }
-
-      hat.position.set(0, 0.95, 1.1);
-      hat.name = 'hat';
-      group.add(hat);
+      // Start out wearing the strawberry hat
+      const startAccessory = buildOutfit('strawberry');
+      startAccessory.name = 'accessory';
+      group.add(startAccessory);
 
       return group;
+    }
+
+    // ---------- Outfits (clothes for the cat/dog) ----------
+    function buildOutfit(kind) {
+      const acc = new THREE.Group();
+
+      if (kind === 'strawberry') {
+        const berryMat = new THREE.MeshStandardMaterial({ color: 0xe8384f });
+        const berry = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), berryMat);
+        berry.scale.set(1, 1.2, 1);
+        berry.castShadow = true;
+        acc.add(berry);
+
+        const seedMat = new THREE.MeshStandardMaterial({ color: 0xfff2b0 });
+        for (let i = 0; i < 8; i++) {
+          const seed = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), seedMat);
+          const a = (i / 8) * Math.PI * 2;
+          seed.position.set(Math.cos(a) * 0.36, Math.sin(a * 2) * 0.15, Math.sin(a) * 0.36);
+          acc.add(seed);
+        }
+
+        const leafHatMat = new THREE.MeshStandardMaterial({ color: 0x4caf50 });
+        for (let i = 0; i < 5; i++) {
+          const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.28, 6), leafHatMat);
+          const a = (i / 5) * Math.PI * 2;
+          leaf.position.set(Math.cos(a) * 0.14, 0.55, Math.sin(a) * 0.14);
+          leaf.rotation.x = 0.5 * Math.cos(a);
+          leaf.rotation.z = 0.5 * Math.sin(a);
+          acc.add(leaf);
+        }
+        acc.position.set(0, 0.95, 1.1);
+
+      } else if (kind === 'bow') {
+        const bowMat = new THREE.MeshStandardMaterial({ color: 0xff4fa3 });
+        [-0.18, 0.18].forEach(x => {
+          const wing = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.3, 4), bowMat);
+          wing.rotation.z = Math.PI / 2;
+          wing.rotation.y = x > 0 ? 0.3 : -0.3;
+          wing.position.set(x, 0, 0);
+          acc.add(wing);
+        });
+        const knot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), bowMat);
+        acc.add(knot);
+        acc.position.set(0, 0.75, 1.35);
+
+      } else if (kind === 'crown') {
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.22, 16), goldMat);
+        acc.add(band);
+        for (let i = 0; i < 6; i++) {
+          const spike = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.22, 6), goldMat);
+          const a = (i / 6) * Math.PI * 2;
+          spike.position.set(Math.cos(a) * 0.38, 0.2, Math.sin(a) * 0.38);
+          acc.add(spike);
+        }
+        acc.position.set(0, 0.9, 1.1);
+
+      } else if (kind === 'sunglasses') {
+        const glassMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        [-0.22, 0.22].forEach(x => {
+          const lens = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.18, 0.05), glassMat);
+          lens.position.set(x, 0, 0);
+          acc.add(lens);
+        });
+        const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.05), glassMat);
+        acc.add(bridge);
+        acc.position.set(0, 0.42, 1.55);
+
+      } else if (kind === 'scarf') {
+        const scarfMat = new THREE.MeshStandardMaterial({ color: 0x4f8fe8 });
+        const band = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.13, 8, 16), scarfMat);
+        band.rotation.x = Math.PI / 2;
+        acc.add(band);
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 0.08), scarfMat);
+        tail.position.set(0.3, -0.35, 0.2);
+        acc.add(tail);
+        acc.position.set(0, 0.05, 1.05);
+      }
+      // kind === 'none' -> empty group, nothing shown
+
+      return acc;
+    }
+
+    function setOutfit(kind) {
+      if (!cat) return;
+      const old = cat.getObjectByName('accessory');
+      if (old) cat.remove(old);
+      const acc = buildOutfit(kind);
+      acc.name = 'accessory';
+      cat.add(acc);
     }
 
     let cat = null; // the player's pet group (kept name "cat" for the rest of the game logic)
 
     document.getElementById('pickCat').addEventListener('click', () => startGame('cat'));
     document.getElementById('pickDog').addEventListener('click', () => startGame('dog'));
+
+    document.querySelectorAll('.outfitBtn').forEach(btn => {
+      btn.addEventListener('click', () => setOutfit(btn.dataset.outfit));
+    });
 
     function startGame(kind) {
       cat = makePet(kind);
@@ -385,6 +491,38 @@
       document.getElementById('pickScreen').style.display = 'none';
       document.getElementById('ui').style.display = 'block';
       animate();
+    }
+
+    // ---------- Wardrobe, sitting at the bottom of the tree ----------
+    const wardrobe = new THREE.Group();
+    const wardrobeMat = new THREE.MeshStandardMaterial({ color: 0x8a5a34 });
+    const wardrobeBody = new THREE.Mesh(new THREE.BoxGeometry(2.4, 3.2, 1.2), wardrobeMat);
+    wardrobeBody.position.y = 1.6;
+    wardrobeBody.castShadow = true;
+    wardrobeBody.receiveShadow = true;
+    wardrobe.add(wardrobeBody);
+
+    const doorMat2 = new THREE.MeshStandardMaterial({ color: 0x5a3a1e });
+    [-0.6, 0.6].forEach(x => {
+      const door = new THREE.Mesh(new THREE.BoxGeometry(1.05, 2.9, 0.1), doorMat2);
+      door.position.set(x, 1.6, 0.65);
+      wardrobe.add(door);
+    });
+
+    const knobMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
+    [-0.15, 0.15].forEach(x => {
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), knobMat);
+      knob.position.set(x, 1.6, 0.72);
+      wardrobe.add(knob);
+    });
+
+    wardrobe.position.set(9, 0, 6);
+    scene.add(wardrobe);
+
+    const wardrobeMenu = document.getElementById('wardrobeMenu');
+    function checkWardrobe() {
+      const dist = cat.position.distanceTo(wardrobe.position);
+      wardrobeMenu.style.display = dist < 4 ? 'block' : 'none';
     }
 
     // ---------- Controls ----------
@@ -530,6 +668,7 @@
 
       checkPlatformCollision();
       checkCharacterMeet();
+      checkWardrobe();
       updateCamera();
 
       renderer.render(scene, camera);
