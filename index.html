@@ -824,10 +824,8 @@
           g.position.addScaledVector(dir, 0.55);
           g.lookAt(target.x, target.y, target.z);
 
-          if (dist < 1.8) {
+          if (dist < 3) {
             takeDamage(1);
-            eagle.state = 'returning';
-          } else if (dist < 3) {
             eagle.state = 'returning';
           }
         } else if (eagle.state === 'returning') {
