@@ -426,7 +426,8 @@
         });
         const knot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), bowMat);
         acc.add(knot);
-        acc.position.set(0, 0.75, 1.35);
+        acc.position.set(0.35, 0.75, 1.15);
+        acc.rotation.y = 0.5;
 
       } else if (kind === 'crown') {
         const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700 });
@@ -449,7 +450,7 @@
         });
         const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.05), glassMat);
         acc.add(bridge);
-        acc.position.set(0, 0.42, 1.55);
+        acc.position.set(0, 0.42, 1.72);
 
       } else if (kind === 'scarf') {
         const scarfMat = new THREE.MeshStandardMaterial({ color: 0x4f8fe8 });
