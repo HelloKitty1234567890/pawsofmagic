@@ -133,13 +133,58 @@
     trunk.receiveShadow = true;
     treeGroup.add(trunk);
 
-    // Leafy top
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f8f3f });
+    // Leaf materials - a few shades of green for a fuller, less flat look
+    const leafMats = [
+      new THREE.MeshStandardMaterial({ color: 0x3f8f3f }),
+      new THREE.MeshStandardMaterial({ color: 0x2f7a2f }),
+      new THREE.MeshStandardMaterial({ color: 0x59a84f })
+    ];
+    function randLeafMat() { return leafMats[Math.floor(Math.random() * leafMats.length)]; }
+
+    function addLeafCluster(x, y, z, size) {
+      const blobCount = 4 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < blobCount; i++) {
+        const blob = new THREE.Mesh(new THREE.SphereGeometry(size * (0.6 + Math.random() * 0.5), 12, 12), randLeafMat());
+        blob.position.set(
+          x + (Math.random() - 0.5) * size * 1.4,
+          y + (Math.random() - 0.5) * size * 1.2,
+          z + (Math.random() - 0.5) * size * 1.4
+        );
+        blob.castShadow = true;
+        treeGroup.add(blob);
+      }
+    }
+
+    // Big branches poking out from the trunk, each ending in a leaf cluster
+    const branchMat = new THREE.MeshStandardMaterial({ color: 0x7a4f2c });
+    const branches = [];
+    const numBranches = 9;
+    for (let i = 0; i < numBranches; i++) {
+      const angle = i * 2.4 + Math.random() * 0.5;
+      const height = 20 + i * 5.5;
+      const length = 9 + Math.random() * 4;
+      const tilt = 0.5 + Math.random() * 0.35;
+
+      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.85, length, 8), branchMat);
+      branch.castShadow = true;
+      // Position branch so one end touches the trunk, other end sticks outward/upward
+      branch.position.set(Math.cos(angle) * 2.5, height, Math.sin(angle) * 2.5);
+      branch.rotation.z = Math.cos(angle) * tilt;
+      branch.rotation.x = -Math.sin(angle) * tilt;
+      branch.translateY(length / 2);
+      treeGroup.add(branch);
+      branches.push(branch);
+
+      // Leaf cluster at the tip of the branch
+      const tipX = Math.cos(angle) * (2.5 + Math.sin(tilt) * length);
+      const tipZ = Math.sin(angle) * (2.5 + Math.sin(tilt) * length);
+      const tipY = height + Math.cos(tilt) * length;
+      addLeafCluster(tipX, tipY, tipZ, 5 + Math.random() * 2);
+    }
+
+    // Big leafy crown at the very top
     for (let i = 0; i < 3; i++) {
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(14 - i * 2.5, 16, 16), leafMat);
-      leaf.position.set(0, 68 + i * 6, 0);
-      leaf.castShadow = true;
-      treeGroup.add(leaf);
+      addLeafCluster(0, 68 + i * 5, 0, 12 - i * 2);
     }
 
     // Platforms spiraling around the trunk, going up
