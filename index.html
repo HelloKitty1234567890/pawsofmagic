@@ -620,9 +620,9 @@
     const camDistance = 9;
     function updateCamera() {
       const offset = new THREE.Vector3(
-        Math.sin(camYaw) * camDistance * Math.cos(camPitch),
+        -Math.sin(camYaw) * camDistance * Math.cos(camPitch),
         camDistance * Math.sin(camPitch) + 2,
-        Math.cos(camYaw) * camDistance * Math.cos(camPitch)
+        -Math.cos(camYaw) * camDistance * Math.cos(camPitch)
       );
       const desired = cat.position.clone().add(offset);
       camera.position.lerp(desired, 0.15);
