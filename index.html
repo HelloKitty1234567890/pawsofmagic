@@ -4,26 +4,269 @@
   <meta charset="UTF-8">
   <title>Paws of Magic</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(to bottom, #2b1055, #7597de);
+      padding: 0;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background: #a8d8ff;
       font-family: sans-serif;
-      color: white;
-      text-align: center;
     }
-    h1 {
-      font-size: 3em;
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      text-shadow: 2px 2px 3px rgba(0,0,0,0.6);
+      font-size: 18px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #storyBox {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 20, 50, 0.9);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 16px;
+      font-size: 20px;
+      max-width: 500px;
+      text-align: center;
+      display: none;
+      z-index: 10;
+      border: 3px solid #ffd76a;
     }
   </style>
 </head>
 <body>
-  <div>
-    <h1>🐾 Paws of Magic ✨</h1>
-    <p>Coming soon...</p>
-  </div>
+  <div id="ui">🐾 Use ARROW KEYS or WASD to move, SPACE to jump<br>Climb the tree and meet everyone!</div>
+  <div id="storyBox"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // ---------- Basic setup ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xa8d8ff);
+    scene.fog = new THREE.Fog(0xa8d8ff, 30, 120);
+
+    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ---------- Lights ----------
+    const sun = new THREE.DirectionalLight(0xfff2d0, 1.1);
+    sun.position.set(30, 60, 20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -60;
+    sun.shadow.camera.right = 60;
+    sun.shadow.camera.top = 60;
+    sun.shadow.camera.bottom = -60;
+    scene.add(sun);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+
+    // ---------- Ground ----------
+    const groundGeo = new THREE.CircleGeometry(80, 48);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x5fae4e });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // ---------- The Big Tree (trunk + climbable platforms spiraling up) ----------
+    const treeGroup = new THREE.Group();
+    scene.add(treeGroup);
+
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8a5a34 });
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(3, 4.5, 70, 16), trunkMat);
+    trunk.position.y = 35;
+    trunk.castShadow = true;
+    trunk.receiveShadow = true;
+    treeGroup.add(trunk);
+
+    // Leafy top
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f8f3f });
+    for (let i = 0; i < 3; i++) {
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(14 - i * 2.5, 16, 16), leafMat);
+      leaf.position.set(0, 68 + i * 6, 0);
+      leaf.castShadow = true;
+      treeGroup.add(leaf);
+    }
+
+    // Platforms spiraling around the trunk, going up
+    const platforms = [];
+    const platformMat = new THREE.MeshStandardMaterial({ color: 0xa8763e });
+    const numPlatforms = 16;
+    for (let i = 0; i < numPlatforms; i++) {
+      const angle = i * 0.9;
+      const height = 3 + i * 4;
+      const radius = 5.5;
+      const plat = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 0.6, 12), platformMat);
+      plat.position.set(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+      plat.castShadow = true;
+      plat.receiveShadow = true;
+      treeGroup.add(plat);
+      platforms.push(plat);
+    }
+
+    // ---------- Characters to meet (simple colorful critters sitting on some platforms) ----------
+    const storyBox = document.getElementById('storyBox');
+    const characters = [];
+    const characterData = [
+      { color: 0xff6f91, name: 'Whisker the Firefly Sprite', line: '"Ooh, a climber! Keep going, the view gets better!"' },
+      { color: 0xffc75f, name: 'Old Barkclaw', line: '"I have lived in this tree for 100 years. You remind me of myself, young one."' },
+      { color: 0x845ec2, name: 'Glimmer the Moth Witch', line: '"Careful up here... but magic favors the brave."' },
+      { color: 0x2c73d2, name: 'Pip the Acorn Guardian', line: '"You are almost to the top! Just a little further, paw-friend."' }
+    ];
+    const charPlatformIndexes = [3, 7, 11, 14];
+
+    charPlatformIndexes.forEach((platIdx, i) => {
+      const data = characterData[i];
+      const plat = platforms[platIdx];
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.9, 12, 12),
+        new THREE.MeshStandardMaterial({ color: data.color })
+      );
+      body.position.set(plat.position.x, plat.position.y + 1.1, plat.position.z);
+      body.castShadow = true;
+      body.userData = { name: data.name, line: data.line };
+      treeGroup.add(body);
+      characters.push(body);
+    });
+
+    // ---------- Player (magic cat = simple stylized shapes) ----------
+    const cat = new THREE.Group();
+    const catMat = new THREE.MeshStandardMaterial({ color: 0xff9a3c });
+    const catBody = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), catMat);
+    catBody.scale.set(1, 0.85, 1.3);
+    catBody.castShadow = true;
+    cat.add(catBody);
+
+    const catHead = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 16), catMat);
+    catHead.position.set(0, 0.4, 1.1);
+    catHead.castShadow = true;
+    cat.add(catHead);
+
+    const earMat = catMat;
+    [-0.25, 0.25].forEach(x => {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.35, 8), earMat);
+      ear.position.set(x, 0.85, 1.1);
+      cat.add(ear);
+    });
+
+    const tailGeo = new THREE.CylinderGeometry(0.1, 0.15, 1.3, 8);
+    const tail = new THREE.Mesh(tailGeo, catMat);
+    tail.position.set(0, 0.3, -1.2);
+    tail.rotation.x = Math.PI / 3;
+    cat.add(tail);
+
+    cat.position.set(0, 1, 12);
+    scene.add(cat);
+
+    // ---------- Controls ----------
+    const keys = {};
+    window.addEventListener('keydown', e => { keys[e.code] = true; });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    let velocityY = 0;
+    let onGround = true;
+    const gravity = -0.028;
+    const jumpPower = 0.55;
+    const moveSpeed = 0.14;
+
+    let lastMessageTime = -10;
+
+    function checkPlatformCollision() {
+      onGround = false;
+      // ground plane
+      if (cat.position.y <= 1) {
+        cat.position.y = 1;
+        velocityY = 0;
+        onGround = true;
+      }
+      // tree platforms
+      for (const plat of platforms) {
+        const dx = cat.position.x - plat.position.x;
+        const dz = cat.position.z - plat.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        const platTop = plat.position.y + 0.3;
+        if (dist < 2.6 && velocityY <= 0 && cat.position.y - 1 <= platTop && cat.position.y - 1 >= platTop - 1.2) {
+          cat.position.y = platTop + 1;
+          velocityY = 0;
+          onGround = true;
+        }
+      }
+    }
+
+    function checkCharacterMeet() {
+      for (const c of characters) {
+        const dist = cat.position.distanceTo(c.position);
+        if (dist < 2.2) {
+          const now = performance.now();
+          if (now - lastMessageTime > 3000) {
+            lastMessageTime = now;
+            storyBox.style.display = 'block';
+            storyBox.innerHTML = `<b>${c.userData.name}</b><br>${c.userData.line}`;
+            setTimeout(() => { storyBox.style.display = 'none'; }, 3000);
+          }
+        }
+      }
+    }
+
+    // ---------- Camera follow ----------
+    function updateCamera() {
+      const camOffset = new THREE.Vector3(0, 4, 9);
+      const desired = cat.position.clone().add(camOffset);
+      camera.position.lerp(desired, 0.08);
+      camera.lookAt(cat.position.x, cat.position.y + 1, cat.position.z);
+    }
+
+    // ---------- Game loop ----------
+    function animate() {
+      requestAnimationFrame(animate);
+
+      let moveX = 0, moveZ = 0;
+      if (keys['ArrowUp'] || keys['KeyW']) moveZ -= 1;
+      if (keys['ArrowDown'] || keys['KeyS']) moveZ += 1;
+      if (keys['ArrowLeft'] || keys['KeyA']) moveX -= 1;
+      if (keys['ArrowRight'] || keys['KeyD']) moveX += 1;
+
+      if (moveX !== 0 || moveZ !== 0) {
+        const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+        moveX /= len; moveZ /= len;
+        cat.position.x += moveX * moveSpeed;
+        cat.position.z += moveZ * moveSpeed;
+        const targetAngle = Math.atan2(moveX, moveZ);
+        cat.rotation.y += (targetAngle - cat.rotation.y) * 0.2;
+      }
+
+      if (keys['Space'] && onGround) {
+        velocityY = jumpPower;
+        onGround = false;
+      }
+
+      velocityY += gravity;
+      cat.position.y += velocityY;
+
+      checkPlatformCollision();
+      checkCharacterMeet();
+      updateCamera();
+
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
 </body>
 </html>
