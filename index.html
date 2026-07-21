@@ -646,8 +646,8 @@
         const len = Math.sqrt(inputX * inputX + inputZ * inputZ);
         inputX /= len; inputZ /= len;
 
-        const forward = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));
-        const right = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
+        const forward = new THREE.Vector3(-Math.sin(camYaw), 0, -Math.cos(camYaw));
+        const right = new THREE.Vector3(-Math.cos(camYaw), 0, Math.sin(camYaw));
         const move = new THREE.Vector3();
         move.addScaledVector(forward, inputZ);
         move.addScaledVector(right, inputX);
