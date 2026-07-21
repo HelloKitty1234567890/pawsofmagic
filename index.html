@@ -202,6 +202,20 @@
       plat.receiveShadow = true;
       treeGroup.add(plat);
       platforms.push(plat);
+
+      // A second, smaller platform right next to the big one, like a wider deck
+      const nearRadius = 6;
+      const nearAngle = angle + 0.55;
+      const nearPlat = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 0.6, 16), platformMat);
+      nearPlat.position.set(
+        Math.cos(nearAngle) * (radius + nearRadius * 0.7),
+        height + (Math.random() - 0.5) * 1.5,
+        Math.sin(nearAngle) * (radius + nearRadius * 0.7)
+      );
+      nearPlat.castShadow = true;
+      nearPlat.receiveShadow = true;
+      treeGroup.add(nearPlat);
+      platforms.push(nearPlat);
     }
 
     // ---------- Little tree houses sitting on some platforms ----------
@@ -239,7 +253,7 @@
       treeGroup.add(house);
     }
 
-    const housePlatformIndexes = [3, 7, 11, 14];
+    const housePlatformIndexes = [6, 14, 22, 28];
     housePlatformIndexes.forEach(idx => addTreehouse(platforms[idx]));
 
     // ---------- Characters to meet (simple colorful critters sitting on some platforms) ----------
@@ -251,7 +265,7 @@
       { color: 0x845ec2, name: 'Glimmer the Moth Witch', line: '"Careful up here... but magic favors the brave."' },
       { color: 0x2c73d2, name: 'Pip the Acorn Guardian', line: '"You are almost to the top! Just a little further, paw-friend."' }
     ];
-    const charPlatformIndexes = [3, 7, 11, 14];
+    const charPlatformIndexes = [6, 14, 22, 28];
 
     charPlatformIndexes.forEach((platIdx, i) => {
       const data = characterData[i];
