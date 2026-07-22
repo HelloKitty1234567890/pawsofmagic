@@ -433,8 +433,9 @@
     // ---------- Player (magic cat or dog = simple stylized shapes) ----------
     function makePet(kind) {
       const group = new THREE.Group();
-      const color = kind === 'dog' ? 0xc98a4b : 0xff9a3c;
+      const color = kind === 'dog' ? 0xffffff : 0xff9a3c;
       const mat = new THREE.MeshStandardMaterial({ color });
+      const blackMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
 
       const body = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 16), mat);
       body.scale.set(1, 0.85, 1.3);
@@ -447,25 +448,37 @@
       group.add(head);
 
       if (kind === 'dog') {
-        // Floppy dog ears
+        // Floppy black dog ears
         [-0.35, 0.35].forEach(x => {
-          const ear = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 10), mat);
+          const ear = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 10), blackMat);
           ear.scale.set(0.6, 1.3, 0.4);
           ear.position.set(x, 0.25, 1.15);
           ear.rotation.z = x > 0 ? -0.4 : 0.4;
           group.add(ear);
         });
-        // Snout
-        const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.5, 10), mat);
+        // Black patch around one eye
+        const eyePatch = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 10), blackMat);
+        eyePatch.position.set(-0.25, 0.5, 1.35);
+        group.add(eyePatch);
+        // Snout (black, like a dog's nose area)
+        const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.5, 10), blackMat);
         snout.rotation.x = Math.PI / 2;
         snout.position.set(0, 0.25, 1.6);
         group.add(snout);
-        // Wagging tail (up, curled)
-        const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 1.0, 8), mat);
+        // Black patch on the back
+        const backPatch = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), blackMat);
+        backPatch.scale.set(0.9, 0.5, 0.8);
+        backPatch.position.set(0, 0.35, -0.2);
+        group.add(backPatch);
+        // Wagging tail (up, curled) with a black tip
+        const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.75, 8), mat);
         tail.position.set(0, 0.5, -1.1);
         tail.rotation.x = -Math.PI / 3;
         tail.name = 'tail';
         group.add(tail);
+        const tailTip = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), blackMat);
+        tailTip.position.set(0, 0.85, -1.45);
+        group.add(tailTip);
       } else {
         // Pointy cat ears
         [-0.25, 0.25].forEach(x => {
